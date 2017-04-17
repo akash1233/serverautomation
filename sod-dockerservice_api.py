@@ -6,6 +6,7 @@ from time import sleep
 import datetime
 from getpass import getpass
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+
 # Disable SSL check warnings from requests module
 requests.packages.urllib3.disable_warnings(InsecureRequestWarning)
 
@@ -20,6 +21,7 @@ def clear_screen():
     else:
         os.system("cls")
         print("\n")
+
 
 # Set up parser and program --help statements.
 parser = optparse.OptionParser("Usage: python sod-docverservice_api.py --username <Your LDAP username> --passsword "
@@ -68,34 +70,50 @@ order_init = {
 # Json for service item request (CentOS-7 with Docker).
 order_service_item = {
     "service-item-options": {
-        "service-item-Update Docker": {},
-        "service-item-Install Docker": {},
-        "service-item-CentOS7": {
+        "service-item-Add extra disks to root volume for Ubuntu": {
+            "parameters": {
+                "disk-14-size": "100 GB"
+            }
+        },
+        "service-item-Ubuntu-16.04 LTS": {
             "environment": "/api/v2/environments/9",
             "attributes": {
                 "quantity": 1
             },
             "parameters": {
                 "new-password": vm_password,
-                "vm-size": "Small (1 x 2)"
+                "disk-14-size": "100 GB"
+            }
+        },
+        "service-item-Create Ubuntu Sudoers.d": {
+            "parameters": {
+                "disk-14-size": "100 GB"
+            }
+        },
+        "service-item-Bootstrap Concourse": {
+            "parameters": {
+                "Github-Oauth-App-Client-Secret-a75": "0b0b306419c9105935045e9a36e5e238de4a40fb",
+                "Github-Oauth-App-Client-ID-a75": "bdb346fd44bff94a5f1e",
+                "Github-Oauth-Org-a75": "SQ",
+                "disk-14-size": "100 GB"
             }
         }
     },
-    "service-blueprint": "/api/v2/service-blueprints/1",
-    "service-name": "CentOS-7 with Docker"
+    "service-blueprint": "/api/v2/service-blueprints/11",
+    "service-name": "Concourse w/ GHE Auth - U16"
 }
 
 # Create a blank order request POST (Step 1).
 blank_order_request = requests.post(base_url + '/api/v2/orders/', data=order_init, auth=auth_token, verify=False)
-# print(blank_order_request)  #used for testing
+print(blank_order_request)  # used for testing
 if blank_order_request.status_code == 201:
     order_path = blank_order_request.json()['_links']['self']['href']
-    # print(order_path)  # used for testing
+    print(order_path)  # used for testing
 
 # Add the service item to the order POST (Step 2).
 service_item_add_request = requests.post(base_url + order_path + '/service-items/',
                                          data=json.dumps(order_service_item), auth=auth_token, verify=False,
-                                         headers={'Content-Type':'application/json'})
+                                         headers={'Content-Type': 'application/json'})
 
 # Submit the order for processing. POST a blank message to /api/v2/orders/<ordernum>/actions/submit/
 submit_order_request = requests.post(base_url + order_path + '/actions/submit/', auth=auth_token, verify=False)
@@ -104,7 +122,8 @@ submit_order_request = requests.post(base_url + order_path + '/actions/submit/',
 if submit_order_request.status_code == 200:
     print("Order Submitted")
 else:
-    print("There was a problem with your order! The return status code was; {}".format(submit_order_request.status_code))
+    print(
+        "There was a problem with your order! The return status code was; {}".format(submit_order_request.status_code))
     exit(1)
 
 # Create While loop to check the order status and then return the server names once the order is complete.
